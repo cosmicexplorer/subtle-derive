@@ -40,7 +40,7 @@ fn field_names(data: Data) -> Vec<String> {
 /// Derive macro for [`subtle_ng::ConstantTimeEq`](https://docs.rs/subtle-ng/latest/subtle_ng/trait.ConstantTimeEq.html).
 ///
 ///```
-/// use subtle_ng::ConstantTimeEq;
+/// use subtle::ConstantTimeEq;
 /// use subtle_ng_derive::ConstantTimeEq;
 ///
 /// #[derive(ConstantTimeEq)]
@@ -97,7 +97,7 @@ pub fn derive_eq(input: TokenStream) -> TokenStream {
     quote! {
       impl ::subtle::ConstantTimeEq for #ident {
         #[inline]
-        fn ct_eq(&self, other: &Self) -> ::subtle_ng::Choice {
+        fn ct_eq(&self, other: &Self) -> ::subtle::Choice {
           #eq_block
         }
       }
@@ -110,7 +110,7 @@ pub fn derive_eq(input: TokenStream) -> TokenStream {
 /// Derive macro for [`subtle_ng::ConstantTimeGreater`](https://docs.rs/subtle-ng/latest/subtle_ng/trait.ConstantTimeGreater.html).
 ///
 ///```
-/// use subtle_ng::ConstantTimeGreater;
+/// use subtle::ConstantTimeGreater;
 /// use subtle_ng_derive::ConstantTimeGreater;
 ///
 /// #[derive(ConstantTimeGreater)]
@@ -178,7 +178,7 @@ pub fn derive_gt(input: TokenStream) -> TokenStream {
     quote! {
       impl ::subtle::ConstantTimeGreater for #ident {
         #[inline]
-        fn ct_gt(&self, other: &Self) -> ::subtle_ng::Choice {
+        fn ct_gt(&self, other: &Self) -> ::subtle::Choice {
           use ::subtle::{ConstantTimeEq, ConstantTimeGreater};
           #gt_block
         }
