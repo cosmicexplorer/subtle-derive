@@ -38,33 +38,38 @@ pub fn derive(input: TokenStream) -> TokenStream {
   let DeriveInput { ident, data, .. } = parse_macro_input!(input);
   let field_names: Vec<String> = match data {
     Data::Struct(DataStruct { fields, .. }) => match fields {
+      /* Get the field names as strings. */
       Fields::Named(FieldsNamed { named, .. }) => named
         .iter()
         .map(|Field { ident, .. }| ident.as_ref().unwrap().to_string())
         .collect(),
+      /* If unnamed, get the indices of the fields as strings (this becomes e.g. `self.0`). */
       Fields::Unnamed(FieldsUnnamed { unnamed, .. }) => unnamed
         .iter()
         .enumerate()
         .map(|(i, _)| i.to_string())
         .collect(),
+      /* There are no fields to compare, so every instance is trivially equal. */
       Fields::Unit => Vec::new(),
     },
-    _ => todo!(),
+    _ => panic!("this macro does not support enums or unions yet"),
   };
-  let mut eq_stmts: Vec<Stmt> = vec![parse_str("let mut ret: u8 = 1;").unwrap()];
-  eq_stmts.extend(field_names.iter().map(|name| {
-    parse_str(&format!(
-      "ret &= self.{}.ct_eq(&other.{}).unwrap_u8();",
-      name, name
-    ))
-    .unwrap()
-  }));
-  eq_stmts.push(parse_str("return ret.into();").unwrap());
-  let eq_block = Block {
-    brace_token: token::Brace {
-      span: Span::call_site(),
-    },
-    stmts: eq_stmts,
+  let eq_block = {
+    let mut eq_stmts: Vec<Stmt> = vec![parse_str("let mut ret: u8 = 1;").unwrap()];
+    eq_stmts.extend(field_names.iter().map(|name| {
+      parse_str(&format!(
+        "ret &= self.{}.ct_eq(&other.{}).unwrap_u8();",
+        name, name
+      ))
+      .unwrap()
+    }));
+    eq_stmts.push(parse_str("return ret.into();").unwrap());
+    Block {
+      brace_token: token::Brace {
+        span: Span::mixed_site(),
+      },
+      stmts: eq_stmts,
+    }
   };
   let output = quote! {
     impl ::subtle_ng::ConstantTimeEq for #ident {
