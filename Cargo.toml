@@ -19,4 +19,4 @@ quote                   = "1"
 syn                     = { version = "1", features = ["full"] }
 
 [dev-dependencies]
-subtle-ng               = "2.5.0"
+subtle-ng               = "2"
