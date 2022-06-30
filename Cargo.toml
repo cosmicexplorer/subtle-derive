@@ -4,7 +4,8 @@ description             = "Derive macros for subtle-ng traits."
 authors                 = ["Danny McClanahan <dmcC2@hypnicjerk.ai>"]
 license                 = "BSD-3-Clause"
 repository              = "https://github.com/cosmicexplorer/subtle-ng-derive"
-version                 = "0.0.0"
+version                 = "0.0.1"
+documentation           = "https://docs.rs/subtle-ng-derive"
 edition                 = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
