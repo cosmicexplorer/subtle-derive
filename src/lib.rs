@@ -107,6 +107,48 @@ pub fn derive_eq(input: TokenStream) -> TokenStream {
   output.into()
 }
 
+/// Implement [`PartialEq`] and [`Eq`] given a [`subtle_ng::ConstantTimeEq`](https://docs.rs/subtle-ng/latest/subtle_ng/trait.ConstantTimeEq.html) implementation.
+///
+///```
+/// use subtle_ng_derive::{ConstantTimeEq, ConstEq};
+///
+/// #[derive(Debug, ConstantTimeEq, ConstEq)]
+/// pub struct S(pub u8);
+///
+/// assert_eq!(S(0), S(0));
+/// assert_ne!(S(0), S(1));
+///```
+#[proc_macro_derive(ConstEq)]
+pub fn derive_eq_impls(input: TokenStream) -> TokenStream {
+  let DeriveInput { ident, .. } = parse_macro_input!(input);
+
+  let output = if cfg!(feature = "with-ng") {
+    quote! {
+      impl PartialEq for #ident {
+        fn eq(&self, other: &Self) -> bool {
+          use ::subtle_ng::ConstantTimeEq;
+          self.ct_eq(other).into()
+        }
+      }
+
+      impl Eq for #ident {}
+    }
+  } else {
+    quote! {
+      impl PartialEq for #ident {
+        fn eq(&self, other: &Self) -> bool {
+          use ::subtle::ConstantTimeEq;
+          self.ct_eq(other).into()
+        }
+      }
+
+      impl Eq for #ident {}
+    }
+  };
+
+  output.into()
+}
+
 /// Derive macro for [`subtle_ng::ConstantTimeGreater`](https://docs.rs/subtle-ng/latest/subtle_ng/trait.ConstantTimeGreater.html).
 ///
 ///```
@@ -181,6 +223,59 @@ pub fn derive_gt(input: TokenStream) -> TokenStream {
         fn ct_gt(&self, other: &Self) -> ::subtle::Choice {
           use ::subtle::{ConstantTimeEq, ConstantTimeGreater};
           #gt_block
+        }
+      }
+    }
+  };
+
+  output.into()
+}
+
+/// Implement [`PartialOrd`] and [`Ord`] given a [`subtle_ng::ConstantTimeCmp`](https://docs.rs/subtle-ng/latest/subtle_ng/trait.ConstantTimeCmp.html) implementation.
+///
+///```
+/// use subtle_ng_derive::{ConstantTimeEq, ConstantTimeGreater, ConstEq, ConstOrd};
+///
+/// #[derive(Debug, ConstantTimeEq, ConstantTimeGreater, ConstEq, ConstOrd)]
+/// pub struct S(pub u8);
+///
+/// assert_eq!(S(0), S(0));
+/// assert!(S(0) < S(1));
+/// assert!(S(0) <= S(1));
+///```
+#[proc_macro_derive(ConstOrd)]
+pub fn derive_ord_impls(input: TokenStream) -> TokenStream {
+  let DeriveInput { ident, .. } = parse_macro_input!(input);
+
+  let output = if cfg!(feature = "with-ng") {
+    quote! {
+      impl PartialOrd for #ident {
+        fn partial_cmp(&self, other: &Self) -> Option<::core::cmp::Ordering> {
+          use ::subtle_ng::ConstantTimeCmp;
+          Some(self.ct_cmp(other))
+        }
+      }
+
+      impl Ord for #ident {
+        fn cmp(&self, other: &Self) -> ::core::cmp::Ordering {
+          use ::subtle_ng::ConstantTimeCmp;
+          self.ct_cmp(other)
+        }
+      }
+    }
+  } else {
+    quote! {
+      impl PartialOrd for #ident {
+        fn partial_cmp(&self, other: &Self) -> Option<::core::cmp::Ordering> {
+          use ::subtle::ConstantTimeCmp;
+          Some(self.ct_cmp(other))
+        }
+      }
+
+      impl Ord for #ident {
+        fn cmp(&self, other: &Self) -> ::core::cmp::Ordering {
+          use ::subtle::ConstantTimeCmp;
+          self.ct_cmp(other)
         }
       }
     }
