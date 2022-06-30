@@ -4,7 +4,7 @@ description             = "Derive macros for subtle-ng traits."
 authors                 = ["Danny McClanahan <dmcC2@hypnicjerk.ai>"]
 license                 = "BSD-3-Clause"
 repository              = "https://github.com/cosmicexplorer/subtle-ng-derive"
-version                 = "0.0.1"
+version                 = "0.0.2"
 documentation           = "https://docs.rs/subtle-ng-derive"
 edition                 = "2021"
 
@@ -13,10 +13,14 @@ edition                 = "2021"
 [lib]
 proc-macro              = true
 
+[features]
+default                 = []
+with-ng                 = []
+
 [dependencies]
 proc-macro2             = "1"
 quote                   = "1"
 syn                     = { version = "1", features = ["full"] }
 
 [dev-dependencies]
-subtle-ng               = "2"
+subtle-ng               = { version = "2" }

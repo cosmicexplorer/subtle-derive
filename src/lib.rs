@@ -84,11 +84,22 @@ pub fn derive_eq(input: TokenStream) -> TokenStream {
   };
 
   /* Insert the ct_eq() block into the quoted trait method. */
-  let output = quote! {
-    impl ::subtle_ng::ConstantTimeEq for #ident {
-      #[inline]
-      fn ct_eq(&self, other: &Self) -> ::subtle_ng::Choice {
-        #eq_block
+  let output = if cfg!(feature = "with-ng") {
+    quote! {
+      impl ::subtle_ng::ConstantTimeEq for #ident {
+        #[inline]
+        fn ct_eq(&self, other: &Self) -> ::subtle_ng::Choice {
+          #eq_block
+        }
+      }
+    }
+  } else {
+    quote! {
+      impl ::subtle::ConstantTimeEq for #ident {
+        #[inline]
+        fn ct_eq(&self, other: &Self) -> ::subtle_ng::Choice {
+          #eq_block
+        }
       }
     }
   };
@@ -153,12 +164,24 @@ pub fn derive_gt(input: TokenStream) -> TokenStream {
   };
 
   /* Insert the ct_gt() block into the quoted trait method. */
-  let output = quote! {
-    impl ::subtle_ng::ConstantTimeGreater for #ident {
-      #[inline]
-      fn ct_gt(&self, other: &Self) -> ::subtle_ng::Choice {
-        use ::subtle_ng::{ConstantTimeEq, ConstantTimeGreater};
-        #gt_block
+  let output = if cfg!(feature = "with-ng") {
+    quote! {
+      impl ::subtle_ng::ConstantTimeGreater for #ident {
+        #[inline]
+        fn ct_gt(&self, other: &Self) -> ::subtle_ng::Choice {
+          use ::subtle_ng::{ConstantTimeEq, ConstantTimeGreater};
+          #gt_block
+        }
+      }
+    }
+  } else {
+    quote! {
+      impl ::subtle::ConstantTimeGreater for #ident {
+        #[inline]
+        fn ct_gt(&self, other: &Self) -> ::subtle_ng::Choice {
+          use ::subtle::{ConstantTimeEq, ConstantTimeGreater};
+          #gt_block
+        }
       }
     }
   };
