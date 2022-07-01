@@ -61,7 +61,16 @@ fn field_names(data: Data) -> Vec<String> {
 ///```
 #[proc_macro_derive(ConstantTimeEq)]
 pub fn derive_eq(input: TokenStream) -> TokenStream {
-  let DeriveInput { ident, data, .. } = parse_macro_input!(input);
+  let DeriveInput {
+    ident,
+    data,
+    generics: Generics {
+      params,
+      where_clause,
+      ..
+    },
+    ..
+  } = parse_macro_input!(input);
 
   /* Generate the function body of a ct_eq() implementation. */
   let eq_block = {
@@ -215,6 +224,8 @@ pub fn derive_gt(input: TokenStream) -> TokenStream {
           #gt_block
         }
       }
+
+      impl ::subtle_ng::ConstantTimeLess for #ident {}
     }
   } else {
     quote! {
@@ -225,6 +236,8 @@ pub fn derive_gt(input: TokenStream) -> TokenStream {
           #gt_block
         }
       }
+
+      impl ::subtle::ConstantTimeLess for #ident {}
     }
   };
 
@@ -251,14 +264,14 @@ pub fn derive_ord_impls(input: TokenStream) -> TokenStream {
     quote! {
       impl PartialOrd for #ident {
         fn partial_cmp(&self, other: &Self) -> Option<::core::cmp::Ordering> {
-          use ::subtle_ng::ConstantTimeCmp;
-          Some(self.ct_cmp(other))
+          use ::subtle_ng::ConstantTimePartialOrd;
+          self.ct_partial_cmp(other).into()
         }
       }
 
       impl Ord for #ident {
         fn cmp(&self, other: &Self) -> ::core::cmp::Ordering {
-          use ::subtle_ng::ConstantTimeCmp;
+          use ::subtle_ng::ConstantTimeOrd;
           self.ct_cmp(other)
         }
       }
@@ -267,14 +280,14 @@ pub fn derive_ord_impls(input: TokenStream) -> TokenStream {
     quote! {
       impl PartialOrd for #ident {
         fn partial_cmp(&self, other: &Self) -> Option<::core::cmp::Ordering> {
-          use ::subtle::ConstantTimeCmp;
-          Some(self.ct_cmp(other))
+          use ::subtle::ConstantTimePartialOrd;
+          self.ct_partial_cmp(other).into()
         }
       }
 
       impl Ord for #ident {
         fn cmp(&self, other: &Self) -> ::core::cmp::Ordering {
-          use ::subtle::ConstantTimeCmp;
+          use ::subtle::ConstantTimeOrd;
           self.ct_cmp(other)
         }
       }

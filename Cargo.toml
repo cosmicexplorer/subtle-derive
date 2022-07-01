@@ -4,7 +4,7 @@ description             = "Derive macros for subtle-ng traits."
 authors                 = ["Danny McClanahan <dmcC2@hypnicjerk.ai>"]
 license                 = "BSD-3-Clause"
 repository              = "https://github.com/cosmicexplorer/subtle-ng-derive"
-version                 = "0.0.4"
+version                 = "0.0.5"
 documentation           = "https://docs.rs/subtle-ng-derive"
 edition                 = "2021"
 
@@ -23,4 +23,4 @@ quote                   = "1"
 syn                     = { version = "1", features = ["full"] }
 
 [dev-dependencies]
-subtle = { package = "subtle-ng", git = "https://github.com/cosmicexplorer/subtle", rev = "f87325727974bbd62b85fcac162248771262ff1d" }
+subtle = { package = "subtle-ng", git = "https://github.com/cosmicexplorer/subtle", rev = "287f4ead34b0cdd4185083bdd0cd37a38b0954a4" }
