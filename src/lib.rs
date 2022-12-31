@@ -1,4 +1,4 @@
-//! Derive macros for [`subtle-ng`](https://docs.rs/subtle-ng/latest/subtle_ng/) traits.
+//! Derive macros for [`subtle`](https://docs.rs/subtle/latest/subtle/) traits.
 
 #![warn(missing_docs)]
 #![deny(rustdoc::missing_crate_level_docs)]
@@ -37,11 +37,11 @@ fn field_names(data: Data) -> Vec<String> {
   }
 }
 
-/// Derive macro for [`subtle_ng::ConstantTimeEq`](https://docs.rs/subtle-ng/latest/subtle_ng/trait.ConstantTimeEq.html).
+/// Derive macro for [`subtle::ConstantTimeEq`](https://docs.rs/subtle/latest/subtle/trait.ConstantTimeEq.html).
 ///
 ///```
 /// use subtle::ConstantTimeEq;
-/// use subtle_ng_derive::ConstantTimeEq;
+/// use subtle_derive::ConstantTimeEq;
 ///
 /// #[derive(ConstantTimeEq)]
 /// struct S { x: u8, y: u8 }
@@ -61,16 +61,7 @@ fn field_names(data: Data) -> Vec<String> {
 ///```
 #[proc_macro_derive(ConstantTimeEq)]
 pub fn derive_eq(input: TokenStream) -> TokenStream {
-  let DeriveInput {
-    ident,
-    data,
-    generics: Generics {
-      params,
-      where_clause,
-      ..
-    },
-    ..
-  } = parse_macro_input!(input);
+  let DeriveInput { ident, data, .. } = parse_macro_input!(input);
 
   /* Generate the function body of a ct_eq() implementation. */
   let eq_block = {
@@ -93,22 +84,11 @@ pub fn derive_eq(input: TokenStream) -> TokenStream {
   };
 
   /* Insert the ct_eq() block into the quoted trait method. */
-  let output = if cfg!(feature = "with-ng") {
-    quote! {
-      impl ::subtle_ng::ConstantTimeEq for #ident {
-        #[inline]
-        fn ct_eq(&self, other: &Self) -> ::subtle_ng::Choice {
-          #eq_block
-        }
-      }
-    }
-  } else {
-    quote! {
-      impl ::subtle::ConstantTimeEq for #ident {
-        #[inline]
-        fn ct_eq(&self, other: &Self) -> ::subtle::Choice {
-          #eq_block
-        }
+  let output = quote! {
+    impl ::subtle::ConstantTimeEq for #ident {
+      #[inline]
+      fn ct_eq(&self, other: &Self) -> ::subtle::Choice {
+        #eq_block
       }
     }
   };
@@ -116,10 +96,10 @@ pub fn derive_eq(input: TokenStream) -> TokenStream {
   output.into()
 }
 
-/// Implement [`PartialEq`] and [`Eq`] given a [`subtle_ng::ConstantTimeEq`](https://docs.rs/subtle-ng/latest/subtle_ng/trait.ConstantTimeEq.html) implementation.
+/// Implement [`PartialEq`] and [`Eq`] given a [`subtle::ConstantTimeEq`](https://docs.rs/subtle/latest/subtle/trait.ConstantTimeEq.html) implementation.
 ///
 ///```
-/// use subtle_ng_derive::{ConstantTimeEq, ConstEq};
+/// use subtle_derive::{ConstantTimeEq, ConstEq};
 ///
 /// #[derive(Debug, ConstantTimeEq, ConstEq)]
 /// pub struct S(pub u8);
@@ -131,38 +111,25 @@ pub fn derive_eq(input: TokenStream) -> TokenStream {
 pub fn derive_eq_impls(input: TokenStream) -> TokenStream {
   let DeriveInput { ident, .. } = parse_macro_input!(input);
 
-  let output = if cfg!(feature = "with-ng") {
-    quote! {
-      impl PartialEq for #ident {
-        fn eq(&self, other: &Self) -> bool {
-          use ::subtle_ng::ConstantTimeEq;
-          self.ct_eq(other).into()
-        }
+  let output = quote! {
+    impl PartialEq for #ident {
+      fn eq(&self, other: &Self) -> bool {
+        use ::subtle::ConstantTimeEq;
+        self.ct_eq(other).into()
       }
-
-      impl Eq for #ident {}
     }
-  } else {
-    quote! {
-      impl PartialEq for #ident {
-        fn eq(&self, other: &Self) -> bool {
-          use ::subtle::ConstantTimeEq;
-          self.ct_eq(other).into()
-        }
-      }
 
-      impl Eq for #ident {}
-    }
+    impl Eq for #ident {}
   };
 
   output.into()
 }
 
-/// Derive macro for [`subtle_ng::ConstantTimeGreater`](https://docs.rs/subtle-ng/latest/subtle_ng/trait.ConstantTimeGreater.html).
+/// Derive macro for [`subtle::ConstantTimeGreater`](https://docs.rs/subtle/latest/subtle/trait.ConstantTimeGreater.html).
 ///
 ///```
 /// use subtle::ConstantTimeGreater;
-/// use subtle_ng_derive::ConstantTimeGreater;
+/// use subtle_derive::ConstantTimeGreater;
 ///
 /// #[derive(ConstantTimeGreater)]
 /// struct S { x: u8, y: u8 }
@@ -215,81 +182,73 @@ pub fn derive_gt(input: TokenStream) -> TokenStream {
   };
 
   /* Insert the ct_gt() block into the quoted trait method. */
-  let output = if cfg!(feature = "with-ng") {
-    quote! {
-      impl ::subtle_ng::ConstantTimeGreater for #ident {
-        #[inline]
-        fn ct_gt(&self, other: &Self) -> ::subtle_ng::Choice {
-          use ::subtle_ng::{ConstantTimeEq, ConstantTimeGreater};
-          #gt_block
-        }
+  let output = quote! {
+    impl ::subtle::ConstantTimeGreater for #ident {
+      #[inline]
+      fn ct_gt(&self, other: &Self) -> ::subtle::Choice {
+        use ::subtle::{ConstantTimeEq, ConstantTimeGreater};
+        #gt_block
       }
-
-      impl ::subtle_ng::ConstantTimeLess for #ident {}
     }
-  } else {
-    quote! {
-      impl ::subtle::ConstantTimeGreater for #ident {
-        #[inline]
-        fn ct_gt(&self, other: &Self) -> ::subtle::Choice {
-          use ::subtle::{ConstantTimeEq, ConstantTimeGreater};
-          #gt_block
-        }
-      }
 
-      impl ::subtle::ConstantTimeLess for #ident {}
+    impl ::subtle::ConstantTimeLess for #ident {}
+  };
+
+  output.into()
+}
+
+/// Implement [`PartialOrd`] given a [`subtle::ConstantTimePartialOrd`](https://docs.rs/subtle/latest/subtle/trait.ConstantTimePartialOrd.html) implementation.
+///
+///```
+/// use core::cmp::Ordering;
+/// use subtle_derive::{ConstantTimeEq, ConstantTimeGreater, ConstEq, ConstPartialOrd};
+///
+/// #[derive(Debug, ConstantTimeEq, ConstantTimeGreater, ConstEq, ConstPartialOrd)]
+/// pub struct S(pub u8);
+///
+/// assert!(S(0) == S(0));
+/// assert!(S(0).partial_cmp(&S(0)) == Some(Ordering::Equal));
+/// assert!(S(0).partial_cmp(&S(1)) == Some(Ordering::Less));
+///```
+#[proc_macro_derive(ConstPartialOrd)]
+pub fn derive_partial_ord(input: TokenStream) -> TokenStream {
+  let DeriveInput { ident, .. } = parse_macro_input!(input);
+
+  let output = quote! {
+    impl PartialOrd for #ident {
+      fn partial_cmp(&self, other: &Self) -> Option<::core::cmp::Ordering> {
+        use ::subtle::ConstantTimePartialOrd;
+        self.ct_partial_cmp(other).into()
+      }
     }
   };
 
   output.into()
 }
 
-/// Implement [`PartialOrd`] and [`Ord`] given a [`subtle_ng::ConstantTimeCmp`](https://docs.rs/subtle-ng/latest/subtle_ng/trait.ConstantTimeCmp.html) implementation.
+/// Implement [`Ord`] given a [`subtle::ConstantTimeOrd`](https://docs.rs/subtle/latest/subtle/trait.ConstantTimeOrd.html) implementation.
 ///
 ///```
-/// use subtle_ng_derive::{ConstantTimeEq, ConstantTimeGreater, ConstEq, ConstOrd};
+/// use subtle::ConstantTimeOrd;
+/// use subtle_derive::{ConstantTimeEq, ConstantTimeGreater, ConstEq, ConstPartialOrd, ConstOrd};
 ///
-/// #[derive(Debug, ConstantTimeEq, ConstantTimeGreater, ConstEq, ConstOrd)]
+/// #[derive(Debug, ConstantTimeEq, ConstantTimeGreater, ConstEq, ConstPartialOrd, ConstOrd)]
 /// pub struct S(pub u8);
+/// impl ConstantTimeOrd for S {}
 ///
 /// assert_eq!(S(0), S(0));
 /// assert!(S(0) < S(1));
 /// assert!(S(0) <= S(1));
 ///```
 #[proc_macro_derive(ConstOrd)]
-pub fn derive_ord_impls(input: TokenStream) -> TokenStream {
+pub fn derive_ord(input: TokenStream) -> TokenStream {
   let DeriveInput { ident, .. } = parse_macro_input!(input);
 
-  let output = if cfg!(feature = "with-ng") {
-    quote! {
-      impl PartialOrd for #ident {
-        fn partial_cmp(&self, other: &Self) -> Option<::core::cmp::Ordering> {
-          use ::subtle_ng::ConstantTimePartialOrd;
-          self.ct_partial_cmp(other).into()
-        }
-      }
-
-      impl Ord for #ident {
-        fn cmp(&self, other: &Self) -> ::core::cmp::Ordering {
-          use ::subtle_ng::ConstantTimeOrd;
-          self.ct_cmp(other)
-        }
-      }
-    }
-  } else {
-    quote! {
-      impl PartialOrd for #ident {
-        fn partial_cmp(&self, other: &Self) -> Option<::core::cmp::Ordering> {
-          use ::subtle::ConstantTimePartialOrd;
-          self.ct_partial_cmp(other).into()
-        }
-      }
-
-      impl Ord for #ident {
-        fn cmp(&self, other: &Self) -> ::core::cmp::Ordering {
-          use ::subtle::ConstantTimeOrd;
-          self.ct_cmp(other)
-        }
+  let output = quote! {
+    impl Ord for #ident {
+      fn cmp(&self, other: &Self) -> ::core::cmp::Ordering {
+        use ::subtle::ConstantTimeOrd;
+        self.ct_cmp(other)
       }
     }
   };

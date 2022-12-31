@@ -1,11 +1,11 @@
 [package]
-name                    = "subtle-ng-derive"
-description             = "Derive macros for subtle-ng traits."
+name                    = "subtle-derive"
+description             = "Derive macros for subtle traits."
 authors                 = ["Danny McClanahan <dmcC2@hypnicjerk.ai>"]
 license                 = "BSD-3-Clause"
-repository              = "https://github.com/cosmicexplorer/subtle-ng-derive"
+repository              = "https://github.com/cosmicexplorer/subtle-derive"
 version                 = "0.0.5"
-documentation           = "https://docs.rs/subtle-ng-derive"
+documentation           = "https://docs.rs/subtle-derive"
 edition                 = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -15,7 +15,6 @@ proc-macro              = true
 
 [features]
 default                 = []
-with-ng                 = []
 
 [dependencies]
 proc-macro2             = "1"
@@ -23,4 +22,4 @@ quote                   = "1"
 syn                     = { version = "1", features = ["full"] }
 
 [dev-dependencies]
-subtle = { package = "subtle-ng", git = "https://github.com/cosmicexplorer/subtle", rev = "287f4ead34b0cdd4185083bdd0cd37a38b0954a4" }
+subtle = { package = "subtle", git = "https://github.com/cosmicexplorer/subtle", rev = "d38c054ca6e17caac41c780d66879b3453e00e47" }
