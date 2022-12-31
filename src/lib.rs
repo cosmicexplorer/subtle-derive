@@ -37,7 +37,9 @@ fn field_names(data: Data) -> Vec<String> {
   }
 }
 
-/// Derive macro for [`subtle::ConstantTimeEq`](https://docs.rs/subtle/latest/subtle/trait.ConstantTimeEq.html).
+/// Derive macro for
+/// [`subtle::ConstantTimeEq`](https://docs.rs/subtle/latest/subtle/trait.ConstantTimeEq.html)
+/// implemented using [`subtle::IteratedEq`](https://docs.rs/subtle/latest/subtle/struct.IteratedEq.html).
 ///
 ///```
 /// use subtle::ConstantTimeEq;
@@ -47,41 +49,41 @@ fn field_names(data: Data) -> Vec<String> {
 /// struct S { x: u8, y: u8 }
 /// let s1 = S { x: 0, y: 1 };
 /// let s2 = S { x: 0, y: 2 };
-/// assert_eq!(1, s1.ct_eq(&s1).unwrap_u8());
-/// assert_eq!(1, s2.ct_eq(&s2).unwrap_u8());
-/// assert_eq!(0, s1.ct_eq(&s2).unwrap_u8());
+/// assert!(bool::from(s1.ct_eq(&s1)));
+/// assert!(bool::from(s2.ct_eq(&s2)));
+/// assert!(bool::from(!s1.ct_eq(&s2)));
 ///
 /// #[derive(ConstantTimeEq)]
 /// struct T(u8, u8);
 /// let t1 = T(0, 1);
 /// let t2 = T(0, 2);
-/// assert_eq!(1, t1.ct_eq(&t1).unwrap_u8());
-/// assert_eq!(1, t2.ct_eq(&t2).unwrap_u8());
-/// assert_eq!(0, t1.ct_eq(&t2).unwrap_u8());
+/// assert!(bool::from(t1.ct_eq(&t1)));
+/// assert!(bool::from(t2.ct_eq(&t2)));
+/// assert!(bool::from(!t1.ct_eq(&t2)));
 ///```
 #[proc_macro_derive(ConstantTimeEq)]
 pub fn derive_eq(input: TokenStream) -> TokenStream {
   let DeriveInput { ident, data, .. } = parse_macro_input!(input);
 
   /* Generate the function body of a ct_eq() implementation. */
-  let eq_block = {
-    let field_names = field_names(data);
-    let mut eq_stmts: Vec<Stmt> = vec![parse_str("let mut ret: u8 = 1;").unwrap()];
-    eq_stmts.extend(field_names.into_iter().map(|name| {
-      parse_str(&format!(
-        "ret &= self.{}.ct_eq(&other.{}).unwrap_u8();",
-        name, name
-      ))
-      .unwrap()
-    }));
-    eq_stmts.push(parse_str("return ret.into();").unwrap());
-    Block {
-      brace_token: token::Brace {
-        span: Span::mixed_site(),
-      },
-      stmts: eq_stmts,
-    }
-  };
+  let eq_block =
+    {
+      let field_names = field_names(data);
+      let mut eq_stmts: Vec<Stmt> = vec![
+        parse_str("use ::subtle::IteratedOperation;").unwrap(),
+        parse_str("let mut ret = ::subtle::IteratedEq::initiate();").unwrap(),
+      ];
+      eq_stmts.extend(field_names.into_iter().map(|name| {
+        parse_str(&format!("ret.apply_eq(&self.{}, &other.{});", name, name)).unwrap()
+      }));
+      eq_stmts.push(parse_str("return ret.extract_result();").unwrap());
+      Block {
+        brace_token: token::Brace {
+          span: Span::mixed_site(),
+        },
+        stmts: eq_stmts,
+      }
+    };
 
   /* Insert the ct_eq() block into the quoted trait method. */
   let output = quote! {
@@ -104,8 +106,8 @@ pub fn derive_eq(input: TokenStream) -> TokenStream {
 /// #[derive(Debug, ConstantTimeEq, ConstEq)]
 /// pub struct S(pub u8);
 ///
-/// assert_eq!(S(0), S(0));
-/// assert_ne!(S(0), S(1));
+/// assert!(S(0) == S(0));
+/// assert!(S(0) != S(1));
 ///```
 #[proc_macro_derive(ConstEq)]
 pub fn derive_eq_impls(input: TokenStream) -> TokenStream {
@@ -125,7 +127,10 @@ pub fn derive_eq_impls(input: TokenStream) -> TokenStream {
   output.into()
 }
 
-/// Derive macro for [`subtle::ConstantTimeGreater`](https://docs.rs/subtle/latest/subtle/trait.ConstantTimeGreater.html).
+/// Derive macro for
+/// [`subtle::ConstantTimeGreater`](https://docs.rs/subtle/latest/subtle/trait.ConstantTimeGreater.html)
+/// implemented using
+/// [`subtle::IteratedGreater`](https://docs.rs/subtle/latest/subtle/struct.IteratedGreater.html).
 ///
 ///```
 /// use subtle::ConstantTimeGreater;
@@ -135,15 +140,15 @@ pub fn derive_eq_impls(input: TokenStream) -> TokenStream {
 /// struct S { x: u8, y: u8 }
 /// let s1 = S { x: 0, y: 1 };
 /// let s2 = S { x: 0, y: 2 };
-/// assert_eq!(0, s1.ct_gt(&s1).unwrap_u8());
-/// assert_eq!(1, s2.ct_gt(&s1).unwrap_u8());
+/// assert!(bool::from(!s1.ct_gt(&s1)));
+/// assert!(bool::from(s2.ct_gt(&s1)));
 ///
 /// #[derive(ConstantTimeGreater)]
 /// struct T(u8, u8);
 /// let t1 = T(0, 1);
 /// let t2 = T(0, 2);
-/// assert_eq!(0, t1.ct_gt(&t1).unwrap_u8());
-/// assert_eq!(1, t2.ct_gt(&t1).unwrap_u8());
+/// assert!(bool::from(!t1.ct_gt(&t1)));
+/// assert!(bool::from(t2.ct_gt(&t1)));
 ///```
 #[proc_macro_derive(ConstantTimeGreater)]
 pub fn derive_gt(input: TokenStream) -> TokenStream {
@@ -153,26 +158,13 @@ pub fn derive_gt(input: TokenStream) -> TokenStream {
   let gt_block = {
     let field_names = field_names(data);
     let mut gt_stmts: Vec<Stmt> = vec![
-      parse_str("let mut still_at_least_eq: u8 = 1;").unwrap(),
-      parse_str("let mut was_gt: u8 = 0;").unwrap(),
+      parse_str("use ::subtle::IteratedOperation;").unwrap(),
+      parse_str("let mut ret = ::subtle::IteratedGreater::initiate();").unwrap(),
     ];
     for name in field_names.into_iter() {
-      gt_stmts.push(
-        parse_str(&format!(
-          "was_gt |= still_at_least_eq & self.{}.ct_gt(&other.{}).unwrap_u8();",
-          name, name,
-        ))
-        .unwrap(),
-      );
-      gt_stmts.push(
-        parse_str(&format!(
-          "still_at_least_eq &= self.{}.ct_eq(&other.{}).unwrap_u8();",
-          name, name,
-        ))
-        .unwrap(),
-      );
+      gt_stmts.push(parse_str(&format!("ret.apply_gt(&self.{}, &other.{});", name, name)).unwrap());
     }
-    gt_stmts.push(parse_str("return was_gt.into();").unwrap());
+    gt_stmts.push(parse_str("return ret.extract_result();").unwrap());
     Block {
       brace_token: token::Brace {
         span: Span::mixed_site(),
@@ -186,12 +178,74 @@ pub fn derive_gt(input: TokenStream) -> TokenStream {
     impl ::subtle::ConstantTimeGreater for #ident {
       #[inline]
       fn ct_gt(&self, other: &Self) -> ::subtle::Choice {
-        use ::subtle::{ConstantTimeEq, ConstantTimeGreater};
+        use ::subtle::ConstantTimeGreater;
         #gt_block
       }
     }
+  };
 
-    impl ::subtle::ConstantTimeLess for #ident {}
+  output.into()
+}
+
+/// Derive macro for [`subtle::ConstantTimeLess`] implemented using
+/// [`subtle::IteratedLess`](https://docs.rs/subtle/latest/subtle/struct.IteratedLess.html).
+///
+/// Note that [`subtle::ConstantTimeLess`] requires [`subtle::ConstantTimeGreater`] to be
+/// implemented as well, so this macro requires [`ConstantTimeGreater`] to also be derived as well.
+///
+/// [`subtle::ConstantTimeGreater`]: https://docs.rs/subtle/latest/subtle/trait.ConstantTimeGreater.html
+/// [`subtle::ConstantTimeLess`]: https://docs.rs/subtle/latest/subtle/trait.ConstantTimeLess.html
+///
+///```
+/// use subtle::ConstantTimeLess;
+/// use subtle_derive::{ConstantTimeGreater, ConstantTimeLess};
+///
+/// #[derive(ConstantTimeGreater, ConstantTimeLess)]
+/// struct S { x: u8, y: u8 }
+/// let s1 = S { x: 0, y: 2 };
+/// let s2 = S { x: 0, y: 1 };
+/// assert!(bool::from(!s1.ct_lt(&s1)));
+/// assert!(bool::from(s2.ct_lt(&s1)));
+///
+/// #[derive(ConstantTimeGreater, ConstantTimeLess)]
+/// struct T(u8, u8);
+/// let t1 = T(0, 2);
+/// let t2 = T(0, 1);
+/// assert!(bool::from(!t1.ct_lt(&t1)));
+/// assert!(bool::from(t2.ct_lt(&t1)));
+///```
+#[proc_macro_derive(ConstantTimeLess)]
+pub fn derive_lt(input: TokenStream) -> TokenStream {
+  let DeriveInput { ident, data, .. } = parse_macro_input!(input);
+
+  /* Generate the function body of a ct_lt() implementation. */
+  let lt_block = {
+    let field_names = field_names(data);
+    let mut lt_stmts: Vec<Stmt> = vec![
+      parse_str("use ::subtle::IteratedOperation;").unwrap(),
+      parse_str("let mut ret = ::subtle::IteratedLess::initiate();").unwrap(),
+    ];
+    for name in field_names.into_iter() {
+      lt_stmts.push(parse_str(&format!("ret.apply_lt(&self.{}, &other.{});", name, name)).unwrap());
+    }
+    lt_stmts.push(parse_str("return ret.extract_result();").unwrap());
+    Block {
+      brace_token: token::Brace {
+        span: Span::mixed_site(),
+      },
+      stmts: lt_stmts,
+    }
+  };
+
+  /* Insert the ct_lt() block into the quoted trait method. */
+  let output = quote! {
+    impl ::subtle::ConstantTimeLess for #ident {
+      #[inline]
+      fn ct_lt(&self, other: &Self) -> ::subtle::Choice {
+        use ::subtle::ConstantTimeLess;
+        #lt_block
+      }
+    }
   };
 
   output.into()
@@ -201,9 +255,9 @@ pub fn derive_gt(input: TokenStream) -> TokenStream {
 ///
 ///```
 /// use core::cmp::Ordering;
-/// use subtle_derive::{ConstantTimeEq, ConstantTimeGreater, ConstEq, ConstPartialOrd};
+/// use subtle_derive::{ConstantTimeEq, ConstantTimeGreater, ConstantTimeLess, ConstEq, ConstPartialOrd};
 ///
-/// #[derive(Debug, ConstantTimeEq, ConstantTimeGreater, ConstEq, ConstPartialOrd)]
+/// #[derive(Debug, ConstantTimeEq, ConstantTimeGreater, ConstantTimeLess, ConstEq, ConstPartialOrd)]
 /// pub struct S(pub u8);
 ///
 /// assert!(S(0) == S(0));
@@ -230,13 +284,13 @@ pub fn derive_partial_ord(input: TokenStream) -> TokenStream {
 ///
 ///```
 /// use subtle::ConstantTimeOrd;
-/// use subtle_derive::{ConstantTimeEq, ConstantTimeGreater, ConstEq, ConstPartialOrd, ConstOrd};
+/// use subtle_derive::{ConstantTimeEq, ConstantTimeGreater, ConstantTimeLess, ConstEq, ConstPartialOrd, ConstOrd};
 ///
-/// #[derive(Debug, ConstantTimeEq, ConstantTimeGreater, ConstEq, ConstPartialOrd, ConstOrd)]
+/// #[derive(Debug, ConstantTimeEq, ConstantTimeGreater, ConstantTimeLess, ConstEq, ConstPartialOrd, ConstOrd)]
 /// pub struct S(pub u8);
 /// impl ConstantTimeOrd for S {}
 ///
-/// assert_eq!(S(0), S(0));
+/// assert!(S(0) == S(0));
 /// assert!(S(0) < S(1));
 /// assert!(S(0) <= S(1));
 ///```
